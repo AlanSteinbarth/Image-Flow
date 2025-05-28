@@ -28,7 +28,9 @@ env/
 
 # IDE
 .idea/
-.vscode/
+*.swp
+*.swo
+*~
 *.swp
 *.swo
 .DS_Store

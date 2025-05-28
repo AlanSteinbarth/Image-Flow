@@ -14,7 +14,7 @@ from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 from pillow_heif import register_heif_opener
 import os
-from tqdm import tqdm
+import platform
 import logging
 import threading
 try:
@@ -22,6 +22,12 @@ try:
 except ImportError:
     DND_FILES = None
     TkinterDnD = None
+
+# Wykrywanie systemu operacyjnego
+SYSTEM_OS = platform.system()
+IS_MACOS = SYSTEM_OS == "Darwin"
+IS_WINDOWS = SYSTEM_OS == "Windows"
+IS_LINUX = SYSTEM_OS == "Linux"
 
 # Rejestracja obsługi plików HEIC
 register_heif_opener()
@@ -39,6 +45,10 @@ class KonwerterHEIC:
         self.root = root
         self.root.title("Konwerter plików graficznych")
         self.root.geometry("600x710")  # zwiększona wysokość okna o 30 pikseli
+        
+        # Ustawienia specyficzne dla systemu operacyjnego
+        self.konfiguruj_system_operacyjny()
+        
         # Konfiguracja loggera
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
@@ -46,19 +56,94 @@ class KonwerterHEIC:
         # Lista plików do konwersji
         self.pliki_do_konwersji = []
         
-        # Ustaw domyślny folder zapisu na Pulpit
-        self.folder_docelowy = os.path.join(os.path.expanduser("~"), "Desktop")
+        # Ustaw domyślny folder zapisu w zależności od systemu
+        self.folder_docelowy = self.pobierz_domyslny_folder()
         
         self.anuluj_konwersje = False  # Dodane do obsługi anulowania
 
         # Najpierw utwórz interfejs, potem loguj
         self.utworz_interfejs()
+        self.log(f"System: {SYSTEM_OS}")
         self.log(f"Domyślny folder zapisu: {self.folder_docelowy}")
         
         # Konfiguracja przeciągania i upuszczania
         if DND_FILES is not None:
             self.root.drop_target_register(DND_FILES)
             self.root.dnd_bind('<<Drop>>', self.dodaj_pliki_przeciagniecie)
+
+    # =========================================
+    # Konfiguracja specyficzna dla systemu operacyjnego
+    # =========================================
+    def konfiguruj_system_operacyjny(self):
+        """
+        Konfiguruje aplikację w zależności od systemu operacyjnego.
+        """
+        if IS_MACOS:
+            # Ustawienia specyficzne dla macOS
+            if hasattr(self.root, 'createcommand'):
+                self.root.createcommand('::tk::mac::Quit', self.on_quit)
+            # Centrowanie okna na macOS
+            self.root.update_idletasks()
+            width = self.root.winfo_width()
+            height = self.root.winfo_height()
+            x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+            y = (self.root.winfo_screenheight() // 2) - (height // 2)
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
+            
+        elif IS_WINDOWS:
+            # Ustawienia specyficzne dla Windows
+            self.root.iconbitmap(default='')  # Usuwa domyślną ikonę
+            # Windows DPI awareness
+            try:
+                import ctypes
+                ctypes.windll.shcore.SetProcessDpiAwareness(1)
+            except:
+                pass
+            
+        elif IS_LINUX:
+            # Ustawienia specyficzne dla Linux
+            pass
+    
+    def pobierz_domyslny_folder(self):
+        """
+        Zwraca domyślny folder zapisu w zależności od systemu operacyjnego.
+        """
+        home = os.path.expanduser("~")
+        
+        if IS_WINDOWS:
+            # Windows: sprawdź czy istnieje folder Pulpit
+            desktop_paths = [
+                os.path.join(home, "Desktop"),
+                os.path.join(home, "Pulpit"),
+                os.path.join(home, "Bureau"),  # Francuski Windows
+                os.path.join(home, "Escritorio"),  # Hiszpański Windows
+            ]
+            for path in desktop_paths:
+                if os.path.exists(path):
+                    return path
+            return home
+            
+        elif IS_MACOS:
+            # macOS: zawsze Desktop
+            return os.path.join(home, "Desktop")
+            
+        elif IS_LINUX:
+            # Linux: sprawdź XDG lub użyj Desktop
+            try:
+                import subprocess
+                result = subprocess.run(['xdg-user-dir', 'DESKTOP'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    return result.stdout.strip()
+            except:
+                pass
+            # Fallback dla Linux
+            desktop_path = os.path.join(home, "Desktop")
+            if os.path.exists(desktop_path):
+                return desktop_path
+            return home
+            
+        return home  # Fallback dla nieznanych systemów
 
     # =========================================
     # Tworzenie interfejsu użytkownika (GUI)
@@ -154,8 +239,7 @@ class KonwerterHEIC:
         self.anuluj_btn = ttk.Button(przyciski_frame, text="Anuluj", command=self.anuluj, state=tk.DISABLED)
         self.anuluj_btn.grid(row=0, column=2, padx=5, sticky="ew")
         # Pusta przestrzeń, aby przesunąć napis na sam dół
-        main_frame.grid_rowconfigure(8, weight=1)
-        # Napis o autorze na samym dole, wyśrodkowany
+        main_frame.grid_rowconfigure(8, weight=1)        # Napis o autorze na samym dole, wyśrodkowany
         ttk.Label(main_frame, text="Autor: Alan Steinbarth", anchor="center", justify="center").grid(row=9, column=0, columnspan=5, sticky="ew", pady=10)
 
     # =========================================
@@ -195,25 +279,56 @@ class KonwerterHEIC:
             self.miniatura_canvas.delete("all")
 
     # =========================================
+    # Obsługa zamykania aplikacji na macOS
+    # =========================================
+    def on_quit(self):
+        """
+        Obsługa zamykania aplikacji na macOS.
+        """
+        self.root.quit()    # =========================================
     # Wybór plików do konwersji (dialog)
     # =========================================
     def wybierz_pliki(self):
         """
         Otwiera okno dialogowe do wyboru plików graficznych do konwersji.
+        Konfiguruje format filetypes w zależności od systemu operacyjnego.
         """
-        pliki = filedialog.askopenfilenames(
-            filetypes=[
-                ("Pliki graficzne", "*.heic *.jpg *.jpeg *.png *.bmp *.tiff *.gif"),
-                ("Pliki HEIC", "*.heic"),
-                ("Pliki JPG", "*.jpg;*.jpeg"),
-                ("Pliki PNG", "*.png"),
-                ("Pliki BMP", "*.bmp"),
-                ("Pliki TIFF", "*.tiff"),
-                ("Pliki GIF", "*.gif"),
-                ("Wszystkie pliki", "*.*")
-            ]
-        )
-        self.dodaj_pliki(pliki)
+        try:
+            # Format filetypes różni się między systemami
+            if IS_WINDOWS:
+                # Windows używa średników jako separatorów
+                filetypes = [
+                    ("Pliki graficzne", "*.heic;*.jpg;*.jpeg;*.png;*.bmp;*.tiff;*.gif"),
+                    ("Pliki HEIC", "*.heic"),
+                    ("Pliki JPG", "*.jpg;*.jpeg"),
+                    ("Pliki PNG", "*.png"),
+                    ("Pliki BMP", "*.bmp"),
+                    ("Pliki TIFF", "*.tiff"),
+                    ("Pliki GIF", "*.gif"),
+                    ("Wszystkie pliki", "*.*")
+                ]
+            else:
+                # macOS i Linux używają spacji jako separatorów
+                filetypes = [
+                    ("Pliki graficzne", "*.heic *.jpg *.jpeg *.png *.bmp *.tiff *.gif"),
+                    ("Pliki HEIC", "*.heic"),
+                    ("Pliki JPG", "*.jpg *.jpeg"),
+                    ("Pliki PNG", "*.png"),
+                    ("Pliki BMP", "*.bmp"),
+                    ("Pliki TIFF", "*.tiff"),
+                    ("Pliki GIF", "*.gif"),
+                    ("Wszystkie pliki", "*.*")
+                ]
+            
+            pliki = filedialog.askopenfilenames(
+                title="Wybierz pliki do konwersji",
+                filetypes=filetypes
+            )
+            if pliki:  # Sprawdź czy użytkownik wybrał jakieś pliki
+                self.dodaj_pliki(pliki)
+        except Exception as e:
+            self.log(f"Błąd podczas wyboru plików: {e}")
+            messagebox.showerror("Błąd", f"Nie można otworzyć dialogu wyboru plików: {e}")
 
     # =========================================
     # Obsługa przeciągania i upuszczania plików
@@ -259,19 +374,42 @@ class KonwerterHEIC:
             plik = self.pliki_do_konwersji[idx]
             self.log(f"Usunięto plik: {plik}")
             del self.pliki_do_konwersji[idx]
-            self.lista_plikow.delete(idx)
-
-    # =========================================
+            self.lista_plikow.delete(idx)    # =========================================
     # Wybór folderu docelowego
     # =========================================
     def wybierz_folder_docelowy(self):
         """
         Otwiera okno dialogowe do wyboru folderu docelowego zapisu plików.
         """
-        nowy_folder = filedialog.askdirectory(initialdir=self.folder_docelowy)
-        if nowy_folder:
-            self.folder_docelowy = nowy_folder
-            self.log(f"Wybrano folder docelowy: {self.folder_docelowy}")
+        try:
+            nowy_folder = filedialog.askdirectory(
+                initialdir=self.folder_docelowy,
+                title="Wybierz folder docelowy"
+            )
+            if nowy_folder:
+                # Normalizuj ścieżkę dla systemu
+                self.folder_docelowy = os.path.normpath(nowy_folder)
+                self.log(f"Wybrano folder docelowy: {self.folder_docelowy}")
+        except Exception as e:
+            self.log(f"Błąd podczas wyboru folderu: {e}")
+            messagebox.showerror("Błąd", f"Nie można otworzyć dialogu wyboru folderu: {e}")
+
+    # =========================================
+    # Sprawdzanie uprawnień systemu
+    # =========================================
+    def sprawdz_uprawnienia_zapisu(self, folder):
+        """
+        Sprawdza czy aplikacja ma uprawnienia do zapisu w danym folderze.
+        """
+        try:
+            test_file = os.path.join(folder, "test_write_permission.tmp")
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            return True
+        except (PermissionError, OSError) as e:
+            self.log(f"Brak uprawnień do zapisu w folderze: {folder}")
+            return False
 
     # =========================================
     # Logowanie komunikatów do pola tekstowego i loggera
@@ -292,9 +430,7 @@ class KonwerterHEIC:
         Ustawia flagę anulowania konwersji.
         """
         self.anuluj_konwersje = True
-        self.log("Anulowano konwersję!")
-
-    # =========================================
+        self.log("Anulowano konwersję!")    # =========================================
     # Rozpoczęcie procesu konwersji (w osobnym wątku)
     # =========================================
     def rozpocznij_konwersje(self):
@@ -307,6 +443,13 @@ class KonwerterHEIC:
         if not self.pliki_do_konwersji:
             messagebox.showerror("Błąd", "Dodaj pliki do konwersji!")
             return
+          # Sprawdź uprawnienia do zapisu
+        if not self.sprawdz_uprawnienia_zapisu(self.folder_docelowy):
+            messagebox.showerror("Błąd", 
+                f"Brak uprawnień do zapisu w folderze:\n{self.folder_docelowy}\n\n"
+                "Wybierz inny folder lub uruchom aplikację z uprawnieniami administratora.")
+            return
+            
         self.konwertuj_btn.config(state=tk.DISABLED)
         self.anuluj_btn.config(state=tk.NORMAL)
         self.anuluj_konwersje = False
@@ -340,7 +483,11 @@ class KonwerterHEIC:
                     "TIFF": ".tiff",
                     "WEBP": ".webp"
                 }[format_out]
-                plik_docelowy = os.path.join(self.folder_docelowy, f"{nazwa_pliku}{ext}")
+                
+                # Użyj os.path.join i normalizuj ścieżkę
+                plik_docelowy = os.path.normpath(
+                    os.path.join(self.folder_docelowy, f"{nazwa_pliku}{ext}")
+                )
                 if os.path.exists(plik_docelowy):
                     if not messagebox.askyesno("Plik istnieje", f"Plik {nazwa_pliku}{ext} już istnieje. Czy chcesz go nadpisać?"):
                         continue
@@ -413,9 +560,10 @@ class KonwerterHEIC:
         self.root.wait_window(okno)
 
 # =========================================
-# Uruchomienie aplikacji
+# Funkcja główna
 # =========================================
-if __name__ == "__main__":
+def main():
+    """Główna funkcja uruchamiająca aplikację"""
     # Tworzy główne okno aplikacji (z obsługą drag&drop jeśli dostępne)
     if TkinterDnD is not None:
         root = TkinterDnD.Tk()
@@ -423,3 +571,9 @@ if __name__ == "__main__":
         root = tk.Tk()
     app = KonwerterHEIC(root)
     root.mainloop()
+
+# =========================================
+# Uruchomienie aplikacji
+# =========================================
+if __name__ == "__main__":
+    main()
