@@ -12,14 +12,21 @@
 
 ## 📸 Zrzuty ekranu
 
-### Jasny motyw
-![ImageFlow - Jasny motyw](docs/screenshots/light-theme.png)
+### Udana konwersja z podglądem pliku
+![ImageFlow - Komunikat sukcesu z podglądem konwertowanego obrazu](docs/screenshots/Zrzut%20ekranu%202025-06-21%20o%2023.45.25.png)
+*Widok po udanej konwersji - popup "Sukces!" z informacją o zakończeniu procesu, panel podglądu z miniaturą zdjęcia natury oraz szczegółowe logi procesu konwersji w dolnej części okna. Aplikacja w ciemnym motywie.*
 
-### Ciemny motyw  
-![ImageFlow - Ciemny motyw](docs/screenshots/dark-theme.png)
+### Konfiguracja konwersji z wybranymi plikami  
+![ImageFlow - Interfejs z wybranymi plikami i ustawieniami konwersji](docs/screenshots/Zrzut%20ekranu%202025-06-21%20o%2023.43.40.png)
+*Główny widok pracy z aplikacją - wybrany plik do konwersji, ustawienia formatu wyjściowego (JPEG) z jakością 100%, informacje systemowe (macOS Darwin) oraz ścieżki plików wejściowych i wyjściowych. Panel logów pokazuje szczegóły procesu.*
 
-### Proces konwersji
-![ImageFlow - Konwersja](docs/screenshots/conversion-process.gif)
+### Czysty interfejs startowy (ciemny motyw)
+![ImageFlow - Główny interfejs aplikacji w ciemnym motywie](docs/screenshots/Zrzut%20ekranu%202025-06-21%20o%2023.41.33.png)
+*Interfejs początkowy aplikacji w ciemnym motywie - widoczne przyciski wyboru plików, ustawienia formatu (JPEG), suwak jakości (100%) oraz informacje systemowe. Gotowy do pracy z plikami.*
+
+### Interfejs w jasnym motywie
+![ImageFlow - Aplikacja w jasnym motywie z przełącznikiem motywów](docs/screenshots/Zrzut%20ekranu%202025-06-21%20o%2023.41.17.png)
+*Aplikacja przełączona na jasny motyw - widoczna ikona słońca w prawym górnym rogu jako przełącznik motywów. Interfejs pokazuje wszystkie podstawowe elementy: przyciski wyboru plików, ustawienia formatu, panel logów na dole. Demonstracja funkcji przełączania między jasnym a ciemnym motywem.*
 
 ---
 

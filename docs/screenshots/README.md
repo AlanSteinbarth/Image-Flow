@@ -2,7 +2,17 @@
 
 Folder zawiera zrzuty ekranu aplikacji ImageFlow.
 
-## 📸 Potrzebne zrzuty ekranu
+## 📸 Aktualne zrzuty ekranu
+
+### Dostępne zrzuty (21 czerwca 2025)
+- `Zrzut ekranu 2025-06-21 o 23.41.17.png` - Główny interfejs aplikacji
+- `Zrzut ekranu 2025-06-21 o 23.41.33.png` - Wybór plików i ustawienia konwersji
+- `Zrzut ekranu 2025-06-21 o 23.43.40.png` - Podgląd pliku i szczegóły
+- `Zrzut ekranu 2025-06-21 o 23.45.25.png` - Proces konwersji w toku
+- `IMG_3616BA43-6082-4DBE-98C1-8D231B4D63F2.JPEG` - Dodatkowy zrzut ekranu
+- `IMG_3616BA43-6082-4DBE-98C1-8D231B4D63F2.jpg` - Kopia w formacie JPG
+
+## 📋 Potrzebne zrzuty ekranu
 
 ### Podstawowe widoki
 - `light-theme.png` - Aplikacja w jasnym motywie
