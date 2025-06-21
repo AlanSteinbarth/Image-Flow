@@ -1,5 +1,9 @@
 # ImageFlow
 
+<div align="center">
+  <img src="docs/screenshots/Cover.png" alt="ImageFlow - Profesjonalny konwerter plików graficznych" width="800"/>
+</div>
+
 [![CI/CD Pipeline](https://github.com/AlanSteinbarth/Image-Flow/actions/workflows/ci.yml/badge.svg)](https://github.com/AlanSteinbarth/Image-Flow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
