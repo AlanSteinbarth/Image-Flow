@@ -9,6 +9,23 @@
 # ---
 
 # =========================================
+# SPIS TREŚCI
+# =========================================
+# 1. Importy i rejestracja obsługi formatów (linie 27-42)
+# 2. Klasy pomocnicze dla UI (linie 50-452)
+#    2.1. ThemeManager - Zarządzanie motywami aplikacji (linie 55-250)
+#    2.2. ToolTip - Tooltips dla widgetów (linie 252-328)
+#    2.3. LoadingSpinner - Animowany spinner ładowania (linie 330-452)
+# 3. Klasa główna aplikacji: ImageFlow (linie 455-1270)
+#    3.1. Inicjalizacja i konfiguracja systemu (linie 464-548)
+#    3.2. Tworzenie interfejsu użytkownika (linie 551-787)
+#    3.3. Obsługa plików i interfejsu (linie 790-970)
+#    3.4. Logika konwersji plików (linie 973-1143)
+#    3.5. Funkcje UI i animacji (linie 1146-1270)
+# 4. Funkcja główna i uruchomienie (linie 1273-1289)
+# =========================================
+
+# =========================================
 # Importy i rejestracja obsługi formatów
 # =========================================
 import tkinter as tk
@@ -21,20 +38,6 @@ import logging
 import threading
 import subprocess
 import math
-
-# Import TkinterDnD wyłączony - powodował problemy z podwójnymi oknami
-# try:
-#     from tkinterdnd2 import DND_FILES, TkinterDnD
-#     # Sprawdzamy dostępność TkinterDnD bez tworzenia testowego okna
-#     TKINTERDND_AVAILABLE = True
-# except ImportError:
-#     DND_FILES = None
-#     TkinterDnD = None
-#     TKINTERDND_AVAILABLE = False
-
-DND_FILES = None
-TkinterDnD = None
-TKINTERDND_AVAILABLE = False
 
 # Wykrywanie systemu operacyjnego
 SYSTEM_OS = platform.system()
@@ -106,11 +109,20 @@ class ThemeManager:
         self.apply_theme()
 
     def register_widget(self, widget, widget_type):
-        """Rejestruje widget do aktualizacji przy zmianie motywu"""
+        """
+        Rejestruje widget do aktualizacji przy zmianie motywu.
+
+        Args:
+            widget: Widget do zarejestrowania
+            widget_type (str): Typ widgetu ('listbox', 'text', 'canvas', 'frame')
+        """
         self.widgets_to_update.append((widget, widget_type))
 
     def toggle_theme(self):
-        """Przełącza między jasnym a ciemnym motywem"""
+        """
+        Przełącza między jasnym a ciemnym motywem.
+        Wywołuje animację przejścia i aplikuje nowy motyw.
+        """
         self.is_dark = not self.is_dark
 
         # Animacja przy zmianie motywu
@@ -118,7 +130,10 @@ class ThemeManager:
         self.apply_theme()
 
     def apply_theme(self):
-        """Aplikuje aktualny motyw"""
+        """
+        Aplikuje aktualny motyw do wszystkich elementów interfejsu.
+        Konfiguruje style ttk i kolory podstawowych widgetów.
+        """
         theme = self.themes["dark"] if self.is_dark else self.themes["light"]
 
         # Konfiguruj style ttk
@@ -179,7 +194,10 @@ class ThemeManager:
         self.update_registered_widgets()
 
     def update_registered_widgets(self):
-        """Aktualizuje wszystkie zarejestrowane widgety"""
+        """
+        Aktualizuje wszystkie zarejestrowane widgety z nowymi kolorami motywu.
+        Obsługuje bezpieczne usuwanie zniszczonych widgetów z listy.
+        """
         theme = self.themes["dark"] if self.is_dark else self.themes["light"]
 
         # Tworzy kopię listy aby uniknąć modyfikacji podczas iteracji
@@ -223,19 +241,12 @@ class ThemeManager:
                     self.widgets_to_update.remove((widget, widget_type))
 
     def animate_theme_change(self):
-        """Płynna animacja zmiany motywu - wyłączona tymczasowo"""
+        """
+        Płynna animacja zmiany motywu - wyłączona tymczasowo.
+        Funkcja zachowana dla przyszłych ulepszeń UI.
+        """
         # Animacja wyłączona aby uniknąć problemów z błędami widget
         return
-        # try:
-        #     # Fade out i fade in
-        #     steps = [0.9, 0.7, 0.5, 0.7, 0.9, 1.0]
-        #     for alpha in steps:
-        #         self.root.attributes("-alpha", alpha)
-        #         self.root.update()
-        #         time.sleep(0.03)
-        # except (tk.TclError, AttributeError):
-        #     # Jeśli animacja się nie powiedzie, po prostu pomiń
-        #     pass
 
 
 class ToolTip:
@@ -252,7 +263,13 @@ class ToolTip:
         self.widget.bind("<Leave>", self.hide_tooltip)
 
     def show_tooltip(self, _event=None):
-        """Pokazuje tooltip"""
+        """
+        Pokazuje tooltip w odpowiednim miejscu na ekranie.
+        Automatycznie dostosowuje kolory do aktualnego motywu.
+
+        Args:
+            _event: Zdarzenie mouse enter (nieużywane)
+        """
         if self.tooltip_window:
             return
 
@@ -290,26 +307,21 @@ class ToolTip:
         )
         label.pack()
 
-        # Animacja pojawiania się - wyłączona
-        # self.tooltip_window.attributes("-alpha", 0.0)
-        # self.fade_in()
-
     def fade_in(self):
-        """Animacja fade-in tooltipa - wyłączona tymczasowo"""
+        """
+        Animacja fade-in tooltipa - wyłączona tymczasowo.
+        Funkcja zachowana dla przyszłych ulepszeń animacji.
+        """
         # Animacja wyłączona aby uniknąć problemy
         return
-        # alpha_steps = [0.0, 0.3, 0.6, 0.8, 1.0]
-        # for alpha in alpha_steps:
-        #     if self.tooltip_window:
-        #         try:
-        #             self.tooltip_window.attributes("-alpha", alpha)
-        #             self.tooltip_window.update()
-        #             time.sleep(0.02)
-        #         except tk.TclError:
-        #             break
 
     def hide_tooltip(self, _event=None):
-        """Ukrywa tooltip"""
+        """
+        Ukrywa tooltip i niszczy okno tooltipa.
+
+        Args:
+            _event: Zdarzenie mouse leave (nieużywane)
+        """
         if self.tooltip_window:
             self.tooltip_window.destroy()
             self.tooltip_window = None
@@ -327,7 +339,13 @@ class LoadingSpinner:
         self.theme_manager = theme_manager
 
     def create_spinner(self):
-        """Tworzy canvas dla spinnera"""
+        """
+        Tworzy canvas dla spinnera z odpowiednim kolorem tła.
+        Automatycznie dostosowuje kolory do aktualnego motywu.
+
+        Returns:
+            tk.Canvas: Canvas do rysowania spinnera
+        """
         # Pobierz kolory z theme managera jeśli dostępny
         if self.theme_manager:
             theme = (
@@ -350,7 +368,10 @@ class LoadingSpinner:
         return self.canvas
 
     def start(self):
-        """Rozpoczyna animację"""
+        """
+        Rozpoczyna animację spinnera.
+        Ustawia flagę running i wywołuje metodę animate().
+        """
         if not self.canvas:
             return
 
@@ -358,13 +379,19 @@ class LoadingSpinner:
         self.animate()
 
     def stop(self):
-        """Zatrzymuje animację"""
+        """
+        Zatrzymuje animację spinnera.
+        Czyści canvas i ustawia flagę running na False.
+        """
         self.running = False
         if self.canvas:
             self.canvas.delete("all")
 
     def animate(self):
-        """Animuje spinner"""
+        """
+        Animuje spinner z efektem obracania i zanikania.
+        Tworzy 8 linii o różnych poziomach przezroczystości dla efektu ruchu.
+        """
         if not self.running or not self.canvas:
             return
 
@@ -469,11 +496,6 @@ class ImageFlow:
         self.log(f"System: {SYSTEM_OS}")
         self.log(f"Domyślny folder zapisu: {self.folder_docelowy}")
 
-        # Konfiguracja przeciągania i upuszczania - wyłączona tymczasowo
-        # if DND_FILES is not None and hasattr(self.root, "drop_target_register"):
-        #     self.root.drop_target_register(DND_FILES)
-        #     self.root.dnd_bind("<<Drop>>", self.dodaj_pliki_przeciagniecie)
-
     # =========================================
     # Konfiguracja specyficzna dla systemu operacyjnego
     # =========================================
@@ -566,6 +588,8 @@ class ImageFlow:
     def utworz_interfejs(self):
         """
         Buduje i rozmieszcza wszystkie elementy GUI w głównym oknie.
+        Tworzy kompletny interfejs użytkownika z wszystkimi kontrolkami,
+        przyciskami, listami i panelami w odpowiednim układzie.
         """
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky="nsew")
@@ -785,15 +809,22 @@ class ImageFlow:
     def aktualizuj_jakosc_label(self, val):
         """
         Aktualizuje tekst etykiety pokazującej wybraną jakość konwersji.
+
+        Args:
+            val (str): Wartość jakości z suwaka (0-100)
         """
         self.jakosc_label.config(text=f"Jakość po konwersji pliku: {int(float(val))}%")
 
     # =========================================
     # Wyświetlanie szczegółów i miniatury pliku
     # =========================================
-    def pokaz_info_plik(self, _event):  # Używamy _ dla nieużywanego parametru
+    def pokaz_info_plik(self, _event):
         """
         Po zaznaczeniu pliku na liście wyświetla szczegóły i miniaturę.
+        Automatycznie generuje informacje o pliku i tworzy podgląd.
+
+        Args:
+            _event: Zdarzenie wyboru z listbox (nieużywane, używamy _ dla konwencji)
         """
         idxs = self.lista_plikow.curselection()
         if not idxs:
@@ -821,6 +852,7 @@ class ImageFlow:
     def on_quit(self):
         """
         Obsługa zamykania aplikacji na macOS.
+        Wywoływana przez system macOS przy zamykaniu aplikacji.
         """
         self.root.quit()
 
@@ -830,7 +862,9 @@ class ImageFlow:
     def wybierz_pliki(self):
         """
         Otwiera okno dialogowe do wyboru plików graficznych do konwersji.
-        Konfiguruje format filetypes w zależności od systemu operacyjnego.
+        Konfiguruje format filetypes w zależności od systemu operacyjnego
+        (Windows używa średników, macOS/Linux używają spacji jako separatorów).
+        Automatycznie filtruje obsługiwane formaty plików.
         """
         try:
             # Format filetypes różni się między systemami
@@ -871,21 +905,15 @@ class ImageFlow:
             )
 
     # =========================================
-    # Obsługa przeciągania i upuszczania plików
-    # =========================================
-    def dodaj_pliki_przeciagniecie(self, event):
-        """
-        Dodaje pliki przeciągnięte do okna aplikacji (drag & drop).
-        """
-        pliki = self.root.tk.splitlist(event.data)
-        self.dodaj_pliki(pliki)
-
-    # =========================================
-    # Dodawanie plików do listy (z dialogu lub drag&drop)
+    # Dodawanie plików do listy
     # =========================================
     def dodaj_pliki(self, pliki):
         """
-        Dodaje wybrane pliki do listy plików do konwersji, filtruje duplikaty i nieobsługiwane formaty.
+        Dodaje wybrane pliki do listy plików do konwersji.
+        Filtruje duplikaty, nieobsługiwane formaty i sprawdza czy pliki istnieją.
+
+        Args:
+            pliki (list): Lista ścieżek do plików do dodania
         """
         obslugiwane = (".heic", ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif")
         for plik in pliki:
@@ -907,6 +935,7 @@ class ImageFlow:
     def usun_z_listy(self):
         """
         Usuwa zaznaczone pliki z listy plików do konwersji.
+        Obsługuje zaznaczenie wielu plików jednocześnie.
         """
         zaznaczone = list(self.lista_plikow.curselection())
         zaznaczone.reverse()
@@ -922,6 +951,7 @@ class ImageFlow:
     def wybierz_folder_docelowy(self):
         """
         Otwiera okno dialogowe do wyboru folderu docelowego zapisu plików.
+        Normalizuje ścieżkę dla systemu operacyjnego i zapisuje wybór.
         """
         try:
             nowy_folder = filedialog.askdirectory(
@@ -943,6 +973,13 @@ class ImageFlow:
     def sprawdz_uprawnienia_zapisu(self, folder):
         """
         Sprawdza czy aplikacja ma uprawnienia do zapisu w danym folderze.
+        Tworzy testowy plik i usuwa go po sprawdzeniu.
+
+        Args:
+            folder (str): Ścieżka do folderu do sprawdzenia
+
+        Returns:
+            bool: True jeśli można pisać, False w przeciwnym razie
         """
         try:
             test_file = os.path.join(folder, "test_write_permission.tmp")
@@ -960,6 +997,10 @@ class ImageFlow:
     def log(self, message):
         """
         Dodaje komunikat do pola logów oraz do loggera.
+        Automatycznie przewija do najnowszej wiadomości.
+
+        Args:
+            message (str): Wiadomość do zalogowania
         """
         self.pole_logow.insert(tk.END, f"{message}\n")
         self.pole_logow.see(tk.END)
@@ -971,6 +1012,7 @@ class ImageFlow:
     def anuluj(self):
         """
         Ustawia flagę anulowania konwersji.
+        Przerywa trwającą konwersję w najbliższym możliwym momencie.
         """
         self.anuluj_konwersje = True
         self.log("Anulowano konwersję!")
@@ -980,7 +1022,9 @@ class ImageFlow:
     # =========================================
     def rozpocznij_konwersje(self):
         """
-        Rozpoczyna konwersję plików w osobnym wątku, blokuje przycisk konwersji.
+        Rozpoczyna konwersję plików w osobnym wątku.
+        Sprawdza warunki wstępne, blokuje przycisk konwersji i uruchamia wątek.
+        Validuje uprawnienia do zapisu przed rozpoczęciem konwersji.
         """
         if not hasattr(self, "folder_docelowy"):
             messagebox.showerror("Błąd", "Wybierz folder docelowy!")
@@ -1010,7 +1054,10 @@ class ImageFlow:
     # =========================================
     def konwertuj_pliki(self):
         """
-        Przetwarza i konwertuje pliki graficzne do wybranego formatu, obsługuje postęp i błędy.
+        Przetwarza i konwertuje pliki graficzne do wybranego formatu.
+        Obsługuje postęp konwersji, błędy, anulowanie i aktualizuje interfejs.
+        Sprawdza każdy plik pod kątem uszkodzeń przed konwersją.
+        Automatycznie dostosowuje parametry jakości dla różnych formatów.
         """
         total = len(self.pliki_do_konwersji)
         self.pasek_postepu["maximum"] = total
@@ -1107,7 +1154,8 @@ class ImageFlow:
     # =========================================
     def pokaz_okno_sukcesu(self):
         """
-        Wyświetla okno z informacją o zakończonej konwersji plików.
+        Wyświetla modalne okno z informacją o zakończonej konwersji plików.
+        Automatycznie centruje okno na ekranie i blokuje dostęp do głównego okna.
         """
         okno = tk.Toplevel(self.root)
         okno.title("Sukces!")
@@ -1136,7 +1184,10 @@ class ImageFlow:
     # Funkcje UI i animacji
     # =========================================
     def toggle_theme_with_animation(self):
-        """Przełącza motyw z animacją i aktualizuje ikonę przycisku"""
+        """
+        Przełącza motyw z animacją i aktualizuje ikonę przycisku.
+        Bezpiecznie obsługuje błędy aktualizacji interfejsu.
+        """
         self.theme_manager.toggle_theme()
 
         # Aktualizuj ikonę przycisku motywu (bezpieczne podejście)
@@ -1146,7 +1197,15 @@ class ImageFlow:
             self.log(f"Błąd podczas aktualizacji przycisku motywu: {e}")
 
     def show_loading_spinner(self, parent_widget):
-        """Pokazuje spinner ładowania"""
+        """
+        Pokazuje spinner ładowania w określonym widgecie.
+
+        Args:
+            parent_widget: Widget-rodzic gdzie ma się pojawić spinner
+
+        Returns:
+            tk.Canvas: Canvas ze spinnerem
+        """
         if self.loading_spinner:
             self.loading_spinner.stop()
 
@@ -1158,13 +1217,20 @@ class ImageFlow:
         return spinner_canvas
 
     def hide_loading_spinner(self):
-        """Ukrywa spinner ładowania"""
+        """
+        Ukrywa spinner ładowania i zatrzymuje animację.
+        Bezpiecznie usuwa referencje do spinnera.
+        """
         if self.loading_spinner:
             self.loading_spinner.stop()
             self.loading_spinner = None
 
     def rozpocznij_konwersje_z_animacja(self):
-        """Rozpoczyna konwersję z animacją loading spinnera"""
+        """
+        Rozpoczyna konwersję z animacją loading spinnera.
+        Pokazuje spinner podczas konwersji i ukrywa go po zakończeniu.
+        Zawiera fallback na wypadek problemów z animacją.
+        """
         if not hasattr(self, "folder_docelowy"):
             messagebox.showerror("Błąd", "Wybierz folder docelowy!")
             return
@@ -1186,7 +1252,10 @@ class ImageFlow:
             self.rozpocznij_konwersje()
 
     def _uruchom_konwersje_po_animacji(self):
-        """Pomocnicza metoda uruchamiająca konwersję po pokazaniu spinnera"""
+        """
+        Pomocnicza metoda uruchamiająca konwersję po pokazaniu spinnera.
+        Definiuje callback do ukrycia spinnera po zakończeniu konwersji.
+        """
 
         # Przywróć miniaturę i ukryj spinner po zakończeniu
         def zakoncz_animacje():
@@ -1202,7 +1271,11 @@ class ImageFlow:
 # Funkcja główna
 # =========================================
 def main():
-    """Główna funkcja uruchamiająca aplikację"""
+    """
+    Główna funkcja uruchamiająca aplikację ImageFlow.
+    Tworzy główne okno Tkinter i uruchamia pętlę zdarzeń.
+    Używa standardowego Tk() aby uniknąć problemów z podwójnymi oknami.
+    """
     # Używamy zawsze standardowego Tk() aby uniknąć problemów z podwójnymi oknami
     root = tk.Tk()
     ImageFlow(root)
