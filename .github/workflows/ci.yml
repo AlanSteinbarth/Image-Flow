@@ -1,0 +1,204 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.8, 3.9, '3.10', '3.11']
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk
+        # Install virtual display for GUI tests
+        sudo apt-get install -y xvfb
+    
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # macOS already has tkinter
+        echo "macOS setup complete"
+    
+    - name: Install system dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Windows Python usually comes with tkinter
+        echo "Windows setup complete"
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-xvfb flake8 black
+    
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 app.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Check code formatting with Black
+      run: |
+        black --check app.py
+      continue-on-error: true
+    
+    - name: Run tests (Ubuntu with virtual display)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        xvfb-run -a python -m pytest tests/ -v --cov=app --cov-report=xml
+    
+    - name: Run tests (macOS/Windows)
+      if: matrix.os != 'ubuntu-latest'
+      run: |
+        python -m pytest tests/ -v --cov=app --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  build:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install build
+    
+    - name: Build package
+      run: |
+        python -m build
+    
+    - name: Test installation
+      run: |
+        pip install dist/*.whl
+        python -c "import app; print('Import successful')"
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist-${{ matrix.os }}
+        path: dist/
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+        pip install -r requirements.txt
+    
+    - name: Run safety check
+      run: |
+        safety check
+    
+    - name: Run bandit security check
+      run: |
+        bandit -r app.py -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: bandit-report.json
+      if: always()
+
+  performance:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install memory-profiler
+        sudo apt-get install -y python3-tk xvfb
+    
+    - name: Create test image
+      run: |
+        python -c "
+        from PIL import Image
+        import os
+        os.makedirs('temp', exist_ok=True)
+        img = Image.new('RGB', (1920, 1080), color='red')
+        img.save('temp/test.jpg', 'JPEG')
+        print('Test image created')
+        "
+    
+    - name: Run performance test
+      run: |
+        xvfb-run -a python -c "
+        import time
+        import os
+        import tempfile
+        from PIL import Image
+        
+        # Test image loading speed
+        start_time = time.time()
+        with Image.open('temp/test.jpg') as img:
+            img.load()
+        load_time = time.time() - start_time
+        
+        # Test conversion speed
+        start_time = time.time()
+        with Image.open('temp/test.jpg') as img:
+            img.save('temp/test.png', 'PNG')
+        convert_time = time.time() - start_time
+        
+        print('Image load time: {:.3f}s'.format(load_time))
+        print('Conversion time: {:.3f}s'.format(convert_time))
+        
+        # Performance assertions
+        assert load_time < 1.0, 'Image loading too slow: {:.3f}s'.format(load_time)
+        assert convert_time < 5.0, 'Conversion too slow: {:.3f}s'.format(convert_time)
+        print('Performance tests passed!')
+        "

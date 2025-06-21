@@ -1,7 +1,8 @@
 # ---
 # # ImageFlow
 #
-# **Uniwersalna aplikacja do konwersji plików graficznych (HEIC, JPG, PNG, BMP, TIFF, GIF) z graficznym interfejsem użytkownika (Tkinter).**
+# **Uniwersalna aplikacja do konwersji plików graficznych (HEIC, JPG, PNG, BMP, TIFF, GIF)
+# z graficznym interfejsem użytkownika (Tkinter).**
 #
 # Autor: Alan Steinbarth
 # Wersja: 2.0.0
@@ -19,14 +20,21 @@ import platform
 import logging
 import threading
 import subprocess
-import time
 import math
 
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
-except ImportError:
-    DND_FILES = None
-    TkinterDnD = None
+# Import TkinterDnD wyłączony - powodował problemy z podwójnymi oknami
+# try:
+#     from tkinterdnd2 import DND_FILES, TkinterDnD
+#     # Sprawdzamy dostępność TkinterDnD bez tworzenia testowego okna
+#     TKINTERDND_AVAILABLE = True
+# except ImportError:
+#     DND_FILES = None
+#     TkinterDnD = None
+#     TKINTERDND_AVAILABLE = False
+
+DND_FILES = None
+TkinterDnD = None
+TKINTERDND_AVAILABLE = False
 
 # Wykrywanie systemu operacyjnego
 SYSTEM_OS = platform.system()
@@ -48,6 +56,7 @@ class ThemeManager:
         self.root = root
         self.is_dark = False
         self.style = ttk.Style()
+        self.widgets_to_update = []  # Lista widgetów do aktualizacji
 
         # Kolory dla motywów
         self.themes = {
@@ -60,6 +69,16 @@ class ThemeManager:
                 "entry_fg": "#000000",
                 "button_bg": "#f0f0f0",
                 "button_fg": "#000000",
+                "listbox_bg": "#ffffff",
+                "listbox_fg": "#000000",
+                "listbox_select_bg": "#0078d4",
+                "listbox_select_fg": "#ffffff",
+                "text_bg": "#ffffff",
+                "text_fg": "#000000",
+                "canvas_bg": "#ffffff",
+                "frame_bg": "#f0f0f0",
+                "tooltip_bg": "#ffffe0",
+                "tooltip_fg": "#000000",
             },
             "dark": {
                 "bg": "#2d2d30",
@@ -70,11 +89,25 @@ class ThemeManager:
                 "entry_fg": "#ffffff",
                 "button_bg": "#404040",
                 "button_fg": "#ffffff",
+                "listbox_bg": "#3c3c3c",
+                "listbox_fg": "#ffffff",
+                "listbox_select_bg": "#007acc",
+                "listbox_select_fg": "#ffffff",
+                "text_bg": "#2d2d30",
+                "text_fg": "#ffffff",
+                "canvas_bg": "#3c3c3c",
+                "frame_bg": "#2d2d30",
+                "tooltip_bg": "#404040",
+                "tooltip_fg": "#ffffff",
             },
         }
 
         # Aplikuj domyślny motyw
         self.apply_theme()
+
+    def register_widget(self, widget, widget_type):
+        """Rejestruje widget do aktualizacji przy zmianie motywu"""
+        self.widgets_to_update.append((widget, widget_type))
 
     def toggle_theme(self):
         """Przełącza między jasnym a ciemnym motywem"""
@@ -92,7 +125,11 @@ class ThemeManager:
         self.style.configure("TFrame", background=theme["bg"])
         self.style.configure("TLabel", background=theme["bg"], foreground=theme["fg"])
         self.style.configure(
-            "TButton", background=theme["button_bg"], foreground=theme["button_fg"]
+            "TButton",
+            background=theme["button_bg"],
+            foreground=theme["button_fg"],
+            borderwidth=1,
+            focuscolor="none",
         )
         self.style.map(
             "TButton",
@@ -100,28 +137,115 @@ class ThemeManager:
                 ("active", theme["select_bg"]),
                 ("pressed", theme["select_bg"]),
             ],
+            foreground=[
+                ("active", theme["select_fg"]),
+                ("pressed", theme["select_fg"]),
+            ],
+        )
+
+        # Konfiguruj style dla Progressbar
+        self.style.configure(
+            "TProgressbar",
+            background=theme["select_bg"],
+            troughcolor=theme["entry_bg"],
+            borderwidth=1,
+            lightcolor=theme["select_bg"],
+            darkcolor=theme["select_bg"],
+        )
+
+        # Konfiguruj style dla Combobox
+        self.style.configure(
+            "TCombobox",
+            fieldbackground=theme["entry_bg"],
+            background=theme["button_bg"],
+            foreground=theme["entry_fg"],
+            borderwidth=1,
+            focuscolor="none",
+        )
+
+        # Konfiguruj style dla Scale
+        self.style.configure(
+            "TScale",
+            background=theme["bg"],
+            troughcolor=theme["entry_bg"],
+            borderwidth=1,
+            focuscolor="none",
         )
 
         # Konfiguruj główne okno
         self.root.configure(bg=theme["bg"])
 
+        # Aktualizuj zarejestrowane widgety
+        self.update_registered_widgets()
+
+    def update_registered_widgets(self):
+        """Aktualizuje wszystkie zarejestrowane widgety"""
+        theme = self.themes["dark"] if self.is_dark else self.themes["light"]
+
+        # Tworzy kopię listy aby uniknąć modyfikacji podczas iteracji
+        widgets_to_update = self.widgets_to_update.copy()
+
+        for widget, widget_type in widgets_to_update:
+            try:
+                if widget_type == "listbox":
+                    widget.configure(
+                        bg=theme["listbox_bg"],
+                        fg=theme["listbox_fg"],
+                        selectbackground=theme["listbox_select_bg"],
+                        selectforeground=theme["listbox_select_fg"],
+                        highlightbackground=theme["bg"],
+                        highlightcolor=theme["select_bg"],
+                        highlightthickness=1,
+                    )
+                elif widget_type == "text":
+                    widget.configure(
+                        bg=theme["text_bg"],
+                        fg=theme["text_fg"],
+                        insertbackground=theme["text_fg"],
+                        selectbackground=theme["select_bg"],
+                        selectforeground=theme["select_fg"],
+                        highlightbackground=theme["bg"],
+                        highlightcolor=theme["select_bg"],
+                        highlightthickness=1,
+                    )
+                elif widget_type == "canvas":
+                    widget.configure(
+                        bg=theme["canvas_bg"],
+                        highlightbackground=theme["bg"],
+                        highlightcolor=theme["select_bg"],
+                        highlightthickness=1,
+                    )
+                elif widget_type == "frame":
+                    widget.configure(bg=theme["frame_bg"])
+            except tk.TclError:
+                # Widget został zniszczony, usuń z listy
+                if (widget, widget_type) in self.widgets_to_update:
+                    self.widgets_to_update.remove((widget, widget_type))
+
     def animate_theme_change(self):
-        """Płynna animacja zmiany motywu"""
-        # Fade out i fade in
-        steps = [0.9, 0.7, 0.5, 0.7, 0.9, 1.0]
-        for alpha in steps:
-            self.root.attributes("-alpha", alpha)
-            self.root.update()
-            time.sleep(0.03)
+        """Płynna animacja zmiany motywu - wyłączona tymczasowo"""
+        # Animacja wyłączona aby uniknąć problemów z błędami widget
+        return
+        # try:
+        #     # Fade out i fade in
+        #     steps = [0.9, 0.7, 0.5, 0.7, 0.9, 1.0]
+        #     for alpha in steps:
+        #         self.root.attributes("-alpha", alpha)
+        #         self.root.update()
+        #         time.sleep(0.03)
+        # except (tk.TclError, AttributeError):
+        #     # Jeśli animacja się nie powiedzie, po prostu pomiń
+        #     pass
 
 
 class ToolTip:
     """Dodaje tooltips do widgetów"""
 
-    def __init__(self, widget, text):
+    def __init__(self, widget, text, theme_manager=None):
         self.widget = widget
         self.text = text
         self.tooltip_window = None
+        self.theme_manager = theme_manager
 
         # Bind events
         self.widget.bind("<Enter>", self.show_tooltip)
@@ -139,35 +263,50 @@ class ToolTip:
         self.tooltip_window.wm_overrideredirect(True)
         self.tooltip_window.wm_geometry(f"+{x}+{y}")
 
+        # Pobierz kolory z theme managera jeśli dostępny
+        if self.theme_manager:
+            theme = (
+                self.theme_manager.themes["dark"]
+                if self.theme_manager.is_dark
+                else self.theme_manager.themes["light"]
+            )
+            bg_color = theme["tooltip_bg"]
+            fg_color = theme["tooltip_fg"]
+        else:
+            bg_color = "#ffffe0"
+            fg_color = "#000000"
+
         # Styling tooltipa
-        self.tooltip_window.configure(bg="#ffffe0", relief="solid", borderwidth=1)
+        self.tooltip_window.configure(bg=bg_color, relief="solid", borderwidth=1)
 
         label = tk.Label(
             self.tooltip_window,
             text=self.text,
-            background="#ffffe0",
-            foreground="#000000",
+            background=bg_color,
+            foreground=fg_color,
             font=("Arial", 9),
             padx=6,
             pady=4,
         )
         label.pack()
 
-        # Animacja pojawiania się
-        self.tooltip_window.attributes("-alpha", 0.0)
-        self.fade_in()
+        # Animacja pojawiania się - wyłączona
+        # self.tooltip_window.attributes("-alpha", 0.0)
+        # self.fade_in()
 
     def fade_in(self):
-        """Animacja fade-in tooltipa"""
-        alpha_steps = [0.0, 0.3, 0.6, 0.8, 1.0]
-        for alpha in alpha_steps:
-            if self.tooltip_window:
-                try:
-                    self.tooltip_window.attributes("-alpha", alpha)
-                    self.tooltip_window.update()
-                    time.sleep(0.02)
-                except tk.TclError:
-                    break
+        """Animacja fade-in tooltipa - wyłączona tymczasowo"""
+        # Animacja wyłączona aby uniknąć problemy
+        return
+        # alpha_steps = [0.0, 0.3, 0.6, 0.8, 1.0]
+        # for alpha in alpha_steps:
+        #     if self.tooltip_window:
+        #         try:
+        #             self.tooltip_window.attributes("-alpha", alpha)
+        #             self.tooltip_window.update()
+        #             time.sleep(0.02)
+        #         except tk.TclError:
+        #             break
 
     def hide_tooltip(self, _event=None):
         """Ukrywa tooltip"""
@@ -179,21 +318,33 @@ class ToolTip:
 class LoadingSpinner:
     """Animowany loading spinner"""
 
-    def __init__(self, parent, size=32):
+    def __init__(self, parent, size=32, theme_manager=None):
         self.parent = parent
         self.size = size
         self.canvas = None
         self.running = False
         self.angle = 0
+        self.theme_manager = theme_manager
 
     def create_spinner(self):
         """Tworzy canvas dla spinnera"""
-        # Używaj przezroczystego tła aby dopasować się do motywu
+        # Pobierz kolory z theme managera jeśli dostępny
+        if self.theme_manager:
+            theme = (
+                self.theme_manager.themes["dark"]
+                if self.theme_manager.is_dark
+                else self.theme_manager.themes["light"]
+            )
+            bg_color = theme["canvas_bg"]
+        else:
+            bg_color = "white"
+
+        # Używaj koloru tła dostosowanego do motywu
         self.canvas = tk.Canvas(
             self.parent,
             width=self.size,
             height=self.size,
-            bg=self.parent.cget("bg") if hasattr(self.parent, "cget") else "white",
+            bg=bg_color,
             highlightthickness=0,
         )
         return self.canvas
@@ -219,6 +370,17 @@ class LoadingSpinner:
 
         self.canvas.delete("all")
 
+        # Pobierz kolory z theme managera
+        if self.theme_manager:
+            theme = (
+                self.theme_manager.themes["dark"]
+                if self.theme_manager.is_dark
+                else self.theme_manager.themes["light"]
+            )
+            base_color = theme["fg"]
+        else:
+            base_color = "#000000"
+
         # Rysuj spinner
         center = self.size // 2
         radius = center - 4
@@ -231,8 +393,20 @@ class LoadingSpinner:
             y2 = center + radius * math.sin(angle_rad)
 
             alpha = 1.0 - (i / 8.0)
-            gray_val = int(255 * alpha)
-            color = f"#{gray_val:02x}{gray_val:02x}{gray_val:02x}"
+
+            # Konwertuj base_color hex na RGB i zastosuj alpha
+            if base_color.startswith("#"):
+                r = int(base_color[1:3], 16)
+                g = int(base_color[3:5], 16)
+                b = int(base_color[5:7], 16)
+            else:
+                r, g, b = 128, 128, 128  # fallback
+
+            # Zastosuj alpha
+            r = int(r * alpha)
+            g = int(g * alpha)
+            b = int(b * alpha)
+            color = f"#{r:02x}{g:02x}{b:02x}"
 
             self.canvas.create_line(
                 x1, y1, x2, y2, fill=color, width=3, capstyle=tk.ROUND
@@ -240,8 +414,12 @@ class LoadingSpinner:
 
         self.angle = (self.angle + 15) % 360
 
-        if self.running:
-            self.parent.after(50, self.animate)
+        if self.running and self.canvas:
+            try:
+                self.parent.after(50, self.animate)
+            except tk.TclError:
+                # Widget został zniszczony, zatrzymaj animację
+                self.running = False
 
 
 # =========================================
@@ -253,17 +431,19 @@ class ImageFlow:
     Odpowiada za logikę, interfejs oraz obsługę zdarzeń.
     """
 
-    def __init__(self, root):
+    def __init__(self, root, testing_mode=False):
         # Inicjalizacja głównego okna i ustawienia
         self.root = root
         self.root.title("ImageFlow")
         self.root.geometry("600x740")  # zwiększona wysokość dla nowych elementów
+        self.testing_mode = testing_mode
 
         # Inicjalizacja managera motywów
         self.theme_manager = ThemeManager(root)
 
         # Ustawienia specyficzne dla systemu operacyjnego
-        self.konfiguruj_system_operacyjny()
+        if not testing_mode:
+            self.konfiguruj_system_operacyjny()
 
         # Konfiguracja loggera
         logging.basicConfig(level=logging.INFO)
@@ -282,13 +462,17 @@ class ImageFlow:
 
         # Najpierw utwórz interfejs, potem loguj
         self.utworz_interfejs()
+
+        # Wymuś aplikację motywu aby upewnić się że wszystkie kolory są poprawne
+        self.theme_manager.apply_theme()
+
         self.log(f"System: {SYSTEM_OS}")
         self.log(f"Domyślny folder zapisu: {self.folder_docelowy}")
 
-        # Konfiguracja przeciągania i upuszczania
-        if DND_FILES is not None:
-            self.root.drop_target_register(DND_FILES)
-            self.root.dnd_bind("<<Drop>>", self.dodaj_pliki_przeciagniecie)
+        # Konfiguracja przeciągania i upuszczania - wyłączona tymczasowo
+        # if DND_FILES is not None and hasattr(self.root, "drop_target_register"):
+        #     self.root.drop_target_register(DND_FILES)
+        #     self.root.dnd_bind("<<Drop>>", self.dodaj_pliki_przeciagniecie)
 
     # =========================================
     # Konfiguracja specyficzna dla systemu operacyjnego
@@ -311,7 +495,10 @@ class ImageFlow:
 
         elif IS_WINDOWS:
             # Ustawienia specyficzne dla Windows
-            self.root.iconbitmap(default="")  # Usuwa domyślną ikonę
+            try:
+                self.root.iconbitmap(default="")  # Usuwa domyślną ikonę
+            except (tk.TclError, AttributeError):
+                pass  # Nie wszystkie systemy obsługują tę funkcję
             # Windows DPI awareness
             try:
                 import ctypes
@@ -396,17 +583,22 @@ class ImageFlow:
         ToolTip(
             select_btn,
             "Wybierz pliki graficzne do konwersji\nObsługiwane formaty: HEIC, JPG, PNG, BMP, TIFF, GIF",
+            self.theme_manager,
         )
 
         # Przycisk zmiany motywu
-        theme_btn = ttk.Button(
+        self.theme_btn = ttk.Button(
             top_frame,
-            text="🌙" if not self.theme_manager.is_dark else "☀️",
+            text="☀️" if not self.theme_manager.is_dark else "🌙",
             command=self.toggle_theme_with_animation,
             width=3,
         )
-        theme_btn.grid(row=0, column=1, sticky=tk.E, padx=(10, 0))
-        ToolTip(theme_btn, "Przełącz między jasnym a ciemnym motywem")
+        self.theme_btn.grid(row=0, column=1, sticky=tk.E, padx=(10, 0))
+        ToolTip(
+            self.theme_btn,
+            "Przełącz między jasnym a ciemnym motywem",
+            self.theme_manager,
+        )
         # Lista plików i podgląd w jednej ramce
         pliki_podglad_frame = ttk.Frame(main_frame)
         pliki_podglad_frame.grid(row=1, column=0, columnspan=5, pady=5, sticky="nsew")
@@ -420,6 +612,9 @@ class ImageFlow:
         self.lista_plikow.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
         self.lista_plikow.bind("<<ListboxSelect>>", self.pokaz_info_plik)
 
+        # Zarejestruj listbox do aktualizacji motywu
+        self.theme_manager.register_widget(self.lista_plikow, "listbox")
+
         # Scrollbar dla listy plików
         scrollbar_pliki = ttk.Scrollbar(
             pliki_podglad_frame, orient="vertical", command=self.lista_plikow.yview
@@ -427,24 +622,45 @@ class ImageFlow:
         scrollbar_pliki.grid(row=0, column=0, sticky="nse")
         self.lista_plikow.configure(yscrollcommand=scrollbar_pliki.set)
         # Ramka na miniaturę i szczegóły (prawa połowa, cała wysokość)
-        miniatura_frame = ttk.Frame(pliki_podglad_frame)
+        # Używamy tk.Frame zamiast ttk.Frame dla lepszej kontroli kolorów
+        theme = (
+            self.theme_manager.themes["dark"]
+            if self.theme_manager.is_dark
+            else self.theme_manager.themes["light"]
+        )
+        miniatura_frame = tk.Frame(pliki_podglad_frame, bg=theme["frame_bg"])
         miniatura_frame.grid(row=0, column=1, sticky="nsew")
         miniatura_frame.rowconfigure(0, weight=1)
         miniatura_frame.rowconfigure(1, weight=0)
         miniatura_frame.columnconfigure(0, weight=1)
 
+        # Zarejestruj ramkę do aktualizacji motywu
+        self.theme_manager.register_widget(miniatura_frame, "frame")
+
         # Dodaj ramkę centrowania w prawej połówce
-        center_frame = ttk.Frame(miniatura_frame)
+        center_frame = tk.Frame(miniatura_frame, bg=theme["frame_bg"])
         center_frame.grid(row=0, column=0, sticky="nsew")
         center_frame.columnconfigure(0, weight=1)
         center_frame.rowconfigure(0, weight=1)
         center_frame.rowconfigure(1, weight=0)
 
+        # Zarejestruj ramkę centrowania do aktualizacji motywu
+        self.theme_manager.register_widget(center_frame, "frame")
+
         # Miniatura zdjęcia (wyśrodkowana)
+        # Pobierz kolor tła z aktualnego motywu
+        theme = (
+            self.theme_manager.themes["dark"]
+            if self.theme_manager.is_dark
+            else self.theme_manager.themes["light"]
+        )
         self.miniatura_canvas = tk.Canvas(
-            center_frame, width=210, height=235, bg="white"
+            center_frame, width=210, height=235, bg=theme["canvas_bg"]
         )
         self.miniatura_canvas.grid(row=0, column=0, pady=(0, 5), sticky="n")
+
+        # Zarejestruj canvas do aktualizacji motywu
+        self.theme_manager.register_widget(self.miniatura_canvas, "canvas")
         # Szczegóły pliku pod miniaturą (wyśrodkowane)
         self.info_label = ttk.Label(
             center_frame,
@@ -509,6 +725,9 @@ class ImageFlow:
         # Pole logów
         self.pole_logow = tk.Text(main_frame, width=70, height=10)
         self.pole_logow.grid(row=5, column=0, columnspan=5, pady=5)
+
+        # Zarejestruj pole tekstowe do aktualizacji motywu
+        self.theme_manager.register_widget(self.pole_logow, "text")
         # Scrollbar dla logów
         scrollbar = ttk.Scrollbar(
             main_frame, orient="vertical", command=self.pole_logow.yview
@@ -527,7 +746,11 @@ class ImageFlow:
             command=self.wybierz_folder_docelowy,
         )
         folder_btn.grid(row=0, column=0, padx=5, sticky="ew")
-        ToolTip(folder_btn, "Wybierz folder gdzie zostaną zapisane skonwertowane pliki")
+        ToolTip(
+            folder_btn,
+            "Wybierz folder gdzie zostaną zapisane skonwertowane pliki",
+            self.theme_manager,
+        )
 
         # Przycisk konwersji
         self.konwertuj_btn = ttk.Button(
@@ -536,14 +759,18 @@ class ImageFlow:
             command=self.rozpocznij_konwersje_z_animacja,
         )
         self.konwertuj_btn.grid(row=0, column=1, padx=5, sticky="ew")
-        ToolTip(self.konwertuj_btn, "Rozpocznij konwersję wybranych plików")
+        ToolTip(
+            self.konwertuj_btn,
+            "Rozpocznij konwersję wybranych plików",
+            self.theme_manager,
+        )
 
         # Przycisk anulowania
         self.anuluj_btn = ttk.Button(
             przyciski_frame, text="Anuluj", command=self.anuluj, state=tk.DISABLED
         )
         self.anuluj_btn.grid(row=0, column=2, padx=5, sticky="ew")
-        ToolTip(self.anuluj_btn, "Anuluj trwającą konwersję")
+        ToolTip(self.anuluj_btn, "Anuluj trwającą konwersję", self.theme_manager)
         # Pusta przestrzeń, aby przesunąć napis na sam dół
         main_frame.grid_rowconfigure(
             8, weight=1
@@ -912,24 +1139,20 @@ class ImageFlow:
         """Przełącza motyw z animacją i aktualizuje ikonę przycisku"""
         self.theme_manager.toggle_theme()
 
-        # Znajdź przycisk motywu i zaktualizuj jego tekst
-        for widget in self.root.winfo_children():
-            if isinstance(widget, ttk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, ttk.Frame):
-                        for btn in child.winfo_children():
-                            if isinstance(btn, ttk.Button) and btn.cget("width") == 3:
-                                btn.config(
-                                    text="☀️" if self.theme_manager.is_dark else "🌙"
-                                )
-                                break
+        # Aktualizuj ikonę przycisku motywu (bezpieczne podejście)
+        try:
+            self.theme_btn.config(text="🌙" if self.theme_manager.is_dark else "☀️")
+        except (tk.TclError, AttributeError) as e:
+            self.log(f"Błąd podczas aktualizacji przycisku motywu: {e}")
 
     def show_loading_spinner(self, parent_widget):
         """Pokazuje spinner ładowania"""
         if self.loading_spinner:
             self.loading_spinner.stop()
 
-        self.loading_spinner = LoadingSpinner(parent_widget)
+        self.loading_spinner = LoadingSpinner(
+            parent_widget, theme_manager=self.theme_manager
+        )
         spinner_canvas = self.loading_spinner.create_spinner()
         self.loading_spinner.start()
         return spinner_canvas
@@ -980,11 +1203,8 @@ class ImageFlow:
 # =========================================
 def main():
     """Główna funkcja uruchamiająca aplikację"""
-    # Tworzy główne okno aplikacji (z obsługą drag&drop jeśli dostępne)
-    if TkinterDnD is not None:
-        root = TkinterDnD.Tk()
-    else:
-        root = tk.Tk()
+    # Używamy zawsze standardowego Tk() aby uniknąć problemów z podwójnymi oknami
+    root = tk.Tk()
     ImageFlow(root)
     root.mainloop()
 
