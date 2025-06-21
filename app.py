@@ -1,9 +1,10 @@
 # ---
-# # Konwerter plików graficznych
+# # ImageFlow
 #
-# **Aplikacja do konwersji i podglądu plików graficznych (HEIC, JPG, PNG, BMP, TIFF, GIF) z graficznym interfejsem użytkownika (Tkinter).**
+# **Uniwersalna aplikacja do konwersji plików graficznych (HEIC, JPG, PNG, BMP, TIFF, GIF) z graficznym interfejsem użytkownika (Tkinter).**
 #
 # Autor: Alan Steinbarth
+# Wersja: 2.0.0
 # ---
 
 # =========================================
@@ -244,18 +245,18 @@ class LoadingSpinner:
 
 
 # =========================================
-# Klasa główna aplikacji: KonwerterHEIC
+# Klasa główna aplikacji: ImageFlow
 # =========================================
-class KonwerterHEIC:
+class ImageFlow:
     """
-    Główna klasa aplikacji GUI do konwersji plików graficznych.
+    Główna klasa aplikacji GUI ImageFlow do konwersji plików graficznych.
     Odpowiada za logikę, interfejs oraz obsługę zdarzeń.
     """
 
     def __init__(self, root):
         # Inicjalizacja głównego okna i ustawienia
         self.root = root
-        self.root.title("Konwerter plików graficznych")
+        self.root.title("ImageFlow")
         self.root.geometry("600x740")  # zwiększona wysokość dla nowych elementów
 
         # Inicjalizacja managera motywów
@@ -859,7 +860,7 @@ class KonwerterHEIC:
                 bledy += 1
         self.konwertuj_btn.config(state=tk.NORMAL)
         self.anuluj_btn.config(state=tk.DISABLED)
-        self.root.title("Konwerter plików graficznych")
+        self.root.title("ImageFlow")
 
         # Wywołaj callback po zakończeniu (ukrycie spinnera)
         if hasattr(self, "callback_po_konwersji") and self.callback_po_konwersji:
@@ -984,7 +985,7 @@ def main():
         root = TkinterDnD.Tk()
     else:
         root = tk.Tk()
-    KonwerterHEIC(root)  # Usuń nieużywaną zmienną app
+    ImageFlow(root)
     root.mainloop()
 
 

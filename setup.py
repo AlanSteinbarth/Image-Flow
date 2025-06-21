@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
-Setup script for Image Converter
+Setup script for ImageFlow
 """
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+    requirements = [
+        line.strip() for line in fh if line.strip() and not line.startswith("#")
+    ]
 
 setup(
-    name="image-converter",
-    version="1.0.0",
+    name="imageflow",
+    version="2.0.0",
     author="Alan Steinbarth",
-    description="Universal image converter with cross-platform support",
+    description="ImageFlow - Universal image converter with cross-platform support",
     long_description=long_description,
     long_description_content_type="text/markdown",
     py_modules=["app"],

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Skrypt uruchamiający aplikację Konwerter plików graficznych
+# Skrypt uruchamiający aplikację ImageFlow
 # Automatycznie aktywuje środowisko conda i uruchamia aplikację
 
-echo "🚀 Uruchamianie Konwerter plików graficznych..."
+echo "🚀 Uruchamianie ImageFlow..."
 
 # Przejdź do katalogu aplikacji
 cd "$(dirname "$0")"

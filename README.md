@@ -1,4 +1,4 @@
-# Konwerter plików graficznych
+# ImageFlow
 
 Uniwersalna aplikacja do konwersji plików graficznych z obsługą Windows, macOS i Linux.
 
@@ -43,7 +43,7 @@ Uniwersalna aplikacja do konwersji plików graficznych z obsługą Windows, macO
 ### 1. Klonowanie repozytorium
 ```bash
 git clone <adres-repo>
-cd konwerter-plikow-graficznych
+cd imageflow
 ```
 
 ### 2. Tworzenie środowiska wirtualnego (zalecane)
