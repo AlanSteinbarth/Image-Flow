@@ -233,10 +233,3 @@ Alan Steinbarth
 
 </div>
 
-### 📋 Roadmap
-
-- [ ] **v2.1**: Plugin system dla custom formatów
-- [ ] **v2.2**: Web interface (Flask/FastAPI)  
-- [ ] **v2.3**: CLI interface dla batch processing
-- [ ] **v2.4**: Cloud storage integration (Google Drive, Dropbox)
-- [ ] **v3.0**: Machine learning optimizations
